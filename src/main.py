@@ -16,11 +16,8 @@ env_vars = load_env_from_file('.env')
 llm = LLM()
 
 # Generate a poetic response
-response = llm.generate(
-    prompt="Why is the ocean salty?",
-    system="You are a world-class poet. Respond only with short poems.",
-    max_tokens=1000,
-    temperature=1
-)
+while True:
+    prompt = input("Ask the AI: ")
+    response = llm.generate(prompt=prompt)
 
 print(response)
