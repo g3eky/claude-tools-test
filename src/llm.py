@@ -24,7 +24,7 @@ class LLM:
         self.client = anthropic.Anthropic(api_key=self.api_key)
         self.tools = {}
     
-    def register_tool(self, name: str, function: Callable, description: str):
+    def register_tool(self, name: str, function: Callable, description: str, input_schema: Dict[str, Any] = None):
         """
         Register a tool that the LLM can use.
         
@@ -32,11 +32,67 @@ class LLM:
             name: The name of the tool
             function: The function to call when the tool is used
             description: A description of what the tool does
+            input_schema: JSON schema for the tool's input parameters
         """
         self.tools[name] = {
             "function": function,
-            "description": description
+            "description": description,
+            "input_schema": input_schema or self._generate_input_schema(function)
         }
+    
+    def _generate_input_schema(self, function: Callable) -> Dict[str, Any]:
+        """
+        Generate a basic input schema for a function based on its signature.
+        
+        Args:
+            function: The function to generate a schema for
+            
+        Returns:
+            A JSON schema for the function's parameters
+        """
+        import inspect
+        
+        # Get function signature
+        sig = inspect.signature(function)
+        
+        # Create properties for each parameter
+        properties = {}
+        required = []
+        
+        for name, param in sig.parameters.items():
+            # Skip self parameter for methods
+            if name == 'self':
+                continue
+                
+            # Add to required list if no default value
+            if param.default is inspect.Parameter.empty:
+                required.append(name)
+            
+            # Determine type based on annotation
+            param_type = "string"  # Default type
+            if param.annotation is not inspect.Parameter.empty:
+                if param.annotation in (str, Optional[str]):
+                    param_type = "string"
+                elif param.annotation in (int, Optional[int]):
+                    param_type = "integer"
+                elif param.annotation in (float, Optional[float]):
+                    param_type = "number"
+                elif param.annotation in (bool, Optional[bool]):
+                    param_type = "boolean"
+            
+            properties[name] = {
+                "type": param_type,
+                "description": f"Parameter: {name}"
+            }
+        
+        # Create schema
+        schema = {
+            "type": "object",
+            "properties": properties,
+            "required": required
+        }
+        
+        return schema
     
     def generate(self, 
                 prompt: str, 
@@ -147,7 +203,8 @@ class LLM:
         for name, tool_info in self.tools.items():
             tools.append({
                 "name": name,
-                "description": tool_info["description"]
+                "description": tool_info["description"],
+                "input_schema": tool_info["input_schema"]
             })
         
         # Initial message from the user
@@ -182,17 +239,18 @@ class LLM:
             # Check if the response contains tool calls
             tool_calls = []
             for content_block in response.content:
-                if content_block.type == "tool_use":
+                if hasattr(content_block, 'type') and content_block.type == "tool_use":
                     tool_calls.append({
                         "name": content_block.name,
-                        "input": content_block.input
+                        "input": content_block.input,
+                        "id": content_block.id
                     })
             
             if not tool_calls:
                 # No tool calls, return the final response
                 final_response = ""
                 for content_block in response.content:
-                    if content_block.type == "text":
+                    if hasattr(content_block, 'type') and content_block.type == "text":
                         final_response += content_block.text
                 
                 return {
@@ -204,18 +262,30 @@ class LLM:
             for tool_call in tool_calls:
                 tool_name = tool_call["name"]
                 tool_input = tool_call["input"]
+                tool_id = tool_call["id"]
                 
                 if tool_name in self.tools:
                     try:
                         # Execute the tool
                         tool_function = self.tools[tool_name]["function"]
-                        tool_result = tool_function(**json.loads(tool_input))
+                        
+                        # Parse the input as needed
+                        if isinstance(tool_input, str):
+                            try:
+                                input_dict = json.loads(tool_input)
+                            except json.JSONDecodeError:
+                                input_dict = {"input": tool_input}
+                        else:
+                            input_dict = tool_input
+                            
+                        tool_result = tool_function(**input_dict)
                         
                         # Record tool usage
                         tool_usage.append({
                             "tool": tool_name,
                             "input": tool_input,
-                            "output": tool_result
+                            "output": tool_result,
+                            "id": tool_id
                         })
                         
                         # Add tool response to messages
@@ -224,8 +294,9 @@ class LLM:
                             "content": [
                                 {
                                     "type": "tool_use",
+                                    "id": tool_id,
                                     "name": tool_name,
-                                    "input": tool_input
+                                    "input": tool_input,
                                 }
                             ]
                         })
@@ -235,8 +306,8 @@ class LLM:
                             "content": [
                                 {
                                     "type": "tool_result",
-                                    "tool_use_id": len(tool_usage),  # Simple ID based on usage count
-                                    "content": str(tool_result)
+                                    "tool_use_id": tool_id,
+                                    "content": json.dumps(tool_result),
                                 }
                             ]
                         })
@@ -268,7 +339,7 @@ class LLM:
         # If we've reached the maximum number of iterations, return the last response
         final_response = ""
         for content_block in response.content:
-            if content_block.type == "text":
+            if hasattr(content_block, 'type') and content_block.type == "text":
                 final_response += content_block.text
         
         return {

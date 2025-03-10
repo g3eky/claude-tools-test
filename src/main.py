@@ -17,17 +17,38 @@ env_vars = load_env_from_file('.env')
 # Create an instance of the LLM class
 llm = LLM()
 
-# Register tools
+# Register tools with input schemas
 llm.register_tool(
     name="get_current_time",
     function=get_current_time,
-    description="Get the current date and time"
+    description="Get the current date and time",
+    input_schema={
+        "type": "object",
+        "properties": {},
+        "required": []
+    }
 )
 
 llm.register_tool(
     name="get_weather",
     function=get_weather,
-    description="Get the current weather for a location. Parameters: location (string), units (string, optional)"
+    description="Get the current weather for a location",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": "The city name or location"
+            },
+            "units": {
+                "type": "string",
+                "description": "The units to use (metric, imperial, standard)",
+                "enum": ["metric", "imperial", "standard"],
+                "default": "metric"
+            }
+        },
+        "required": ["location"]
+    }
 )
 
 def print_tool_usage(tool_usage):
