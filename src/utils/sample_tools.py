@@ -39,7 +39,7 @@ def get_weather(location: str, units: str = "metric") -> Dict[str, Any]:
     return weather_data 
 
 
-llm_tools = [
+sample_tools = [
     {
         "name": "get_current_time",
         "function": get_current_time,
@@ -71,4 +71,4 @@ llm_tools = [
             "required": ["location"]
         }
     }
-]
+] 

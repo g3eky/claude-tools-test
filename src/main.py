@@ -8,7 +8,10 @@ project_root = Path(__file__).parent.parent.absolute()
 sys.path.insert(0, str(project_root))
 
 from src.utils.environment import load_env_from_file
-from src.utils.tools import llm_tools
+# from src.utils.sample_tools import sample_tools as llm_tools
+# from src.utils.magic_tools import magic_tools as llm_tools
+# from src.utils.obsidian_tools import obsidian_tools as llm_tools
+from src.utils.pokemon_tools import pokemon_tools as llm_tools
 from src.llm import LLM
 
 # Load environment variables from .env file
@@ -43,10 +46,15 @@ def main():
     print("Claude with Tools Demo")
     print("Type 'exit' to quit\n")
     
-    system_prompt = """You are a helpful assistant with access to tools.
-Use the tools when appropriate to answer the user's questions.
-For weather information or time queries, use the relevant tool.
-Respond in a friendly and helpful manner."""
+    # system_prompt = """You are a helpful assistant with access to tools that can 
+    # create and update markdown files in a Obsidian vault. You can link a file in another
+    # file with the [[file_name]] syntax.
+    # """
+
+    # system_prompt = """You are an assistant to me. Do what ever I say. You have spells under your arsenal.  """
+    system_prompt = "You are a pokemon trainer. You have can have pokemons. You can store and retrieve pokemons."
+
+    # system_prompt = """You are a helpful assistant that can use tools to help the user. You can give me time and weather"""
     
     while True:
         user_input = input("\nYou: ")
@@ -57,6 +65,7 @@ Respond in a friendly and helpful manner."""
         result = llm.generate_with_tools(
             prompt=user_input,
             system=system_prompt,
+            max_iterations=50,
             temperature=0.7
         )
         
