@@ -37,3 +37,38 @@ def get_weather(location: str, units: str = "metric") -> Dict[str, Any]:
     }
     
     return weather_data 
+
+
+llm_tools = [
+    {
+        "name": "get_current_time",
+        "function": get_current_time,
+        "description": "Get the current date and time",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_weather",
+        "function": get_weather,
+        "description": "Get the current weather for a location",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "The city name or location"
+                },
+                "units": {
+                    "type": "string",
+                    "description": "The units to use (metric, imperial, standard)",
+                    "enum": ["metric", "imperial", "standard"],
+                    "default": "metric"
+                }
+            },
+            "required": ["location"]
+        }
+    }
+]

@@ -8,7 +8,7 @@ project_root = Path(__file__).parent.parent.absolute()
 sys.path.insert(0, str(project_root))
 
 from src.utils.environment import load_env_from_file
-from src.utils.tools import get_current_time, get_weather
+from src.utils.tools import llm_tools
 from src.llm import LLM
 
 # Load environment variables from .env file
@@ -17,39 +17,10 @@ env_vars = load_env_from_file('.env')
 # Create an instance of the LLM class
 llm = LLM()
 
-# Register tools with input schemas
-llm.register_tool(
-    name="get_current_time",
-    function=get_current_time,
-    description="Get the current date and time",
-    input_schema={
-        "type": "object",
-        "properties": {},
-        "required": []
-    }
-)
 
-llm.register_tool(
-    name="get_weather",
-    function=get_weather,
-    description="Get the current weather for a location",
-    input_schema={
-        "type": "object",
-        "properties": {
-            "location": {
-                "type": "string",
-                "description": "The city name or location"
-            },
-            "units": {
-                "type": "string",
-                "description": "The units to use (metric, imperial, standard)",
-                "enum": ["metric", "imperial", "standard"],
-                "default": "metric"
-            }
-        },
-        "required": ["location"]
-    }
-)
+for tool in llm_tools:
+    llm.register_tool(**tool)
+
 
 def print_tool_usage(tool_usage):
     """Print tool usage information in a readable format."""
@@ -82,7 +53,7 @@ Respond in a friendly and helpful manner."""
         if user_input.lower() in ['exit', 'quit']:
             break
         
-        print("\nThinking...")
+        # print("\nThinking...")
         result = llm.generate_with_tools(
             prompt=user_input,
             system=system_prompt,
@@ -91,8 +62,8 @@ Respond in a friendly and helpful manner."""
         
         print(f"\nClaude: {result['response']}")
         
-        if 'tool_usage' in result and result['tool_usage']:
-            print_tool_usage(result['tool_usage'])
+        # if 'tool_usage' in result and result['tool_usage']:
+        #     print_tool_usage(result['tool_usage'])
         
         if 'warning' in result:
             print(f"\nWarning: {result['warning']}")
