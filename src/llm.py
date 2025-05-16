@@ -176,7 +176,8 @@ class LLM:
                            system: Optional[str] = None,
                            max_tokens: int = 1000,
                            temperature: float = 0.7,
-                           max_iterations: int = 5) -> Dict[str, Any]:
+                           max_iterations: int = 5,
+                           history: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
         Generate a response with tool use capability.
         
@@ -186,16 +187,14 @@ class LLM:
             max_tokens: Maximum number of tokens to generate
             temperature: Controls randomness (0-1)
             max_iterations: Maximum number of tool use iterations
+            history: Optional conversation history from previous calls
             
         Returns:
-            Dictionary containing the final response and tool usage history
+            Dictionary containing the final response, tool usage history, and updated conversation history
         """
         if not self.tools:
             # If no tools are registered, fall back to regular generation
-            return {
-                "response": self.generate(prompt, system, max_tokens, temperature),
-                "tool_usage": []
-            }
+            return self.generate(prompt, system, max_tokens, temperature, history)
         
         # Prepare tools in the format expected by Claude
         tools = []
@@ -206,17 +205,25 @@ class LLM:
                 "input_schema": tool_info["input_schema"]
             })
         
-        # Initial message from the user
-        messages = [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+        # Initialize history if not provided
+        if history is None:
+            history = []
+        
+        # Create user message
+        user_message = {
+            "role": "user",
+            "content": prompt
+        }
+        
+        # Add to history if it's a new conversation or use existing history
+        if not history:
+            messages = [user_message]
+        else:
+            # Use existing history and add new user message
+            messages = history + [user_message]
         
         tool_usage = []
         iterations = 0
-        history = []
         
         while iterations < max_iterations:
             iterations += 1
@@ -246,6 +253,16 @@ class LLM:
                         "id": content_block.id
                     })
             
+            # Create assistant message to add to history
+            assistant_content = response.content
+            assistant_message = {
+                "role": "assistant",
+                "content": assistant_content
+            }
+            
+            # Add assistant response to messages
+            messages.append(assistant_message)
+            
             if not tool_calls:
                 # No tool calls, return the final response
                 final_response = ""
@@ -256,6 +273,7 @@ class LLM:
                 return {
                     "response": final_response,
                     "tool_usage": tool_usage,
+                    "history": messages
                 }
             
             # Process tool calls
@@ -288,20 +306,8 @@ class LLM:
                             "id": tool_id
                         })
                         
-                        # Add tool response to messages
-                        messages.append({
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "tool_use",
-                                    "id": tool_id,
-                                    "name": tool_name,
-                                    "input": tool_input,
-                                }
-                            ]
-                        })
-                        
-                        messages.append({
+                        # Add tool result to messages
+                        tool_result_message = {
                             "role": "user",
                             "content": [
                                 {
@@ -310,14 +316,17 @@ class LLM:
                                     "content": json.dumps(tool_result),
                                 }
                             ]
-                        })
+                        }
+                        
+                        messages.append(tool_result_message)
                     except Exception as e:
                         # Handle tool execution errors
                         error_message = f"Error executing tool {tool_name}: {str(e)}"
-                        messages.append({
+                        error_message_obj = {
                             "role": "system",
                             "content": error_message
-                        })
+                        }
+                        messages.append(error_message_obj)
                         tool_usage.append({
                             "tool": tool_name,
                             "input": tool_input,
@@ -326,10 +335,11 @@ class LLM:
                 else:
                     # Tool not found
                     error_message = f"Tool {tool_name} not found"
-                    messages.append({
+                    error_message_obj = {
                         "role": "system",
                         "content": error_message
-                    })
+                    }
+                    messages.append(error_message_obj)
                     tool_usage.append({
                         "tool": tool_name,
                         "input": tool_input,
@@ -345,5 +355,6 @@ class LLM:
         return {
             "response": final_response,
             "tool_usage": tool_usage,
+            "history": messages,
             "warning": "Maximum number of tool use iterations reached"
         } 
