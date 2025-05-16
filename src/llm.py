@@ -138,40 +138,6 @@ class LLM:
             return response.content[0].text
         return ""
     
-    def generate_with_history(self,
-                             messages: List[Dict[str, Any]],
-                             system: Optional[str] = None,
-                             max_tokens: int = 1000,
-                             temperature: float = 1.0) -> str:
-        """
-        Generate a response with a conversation history.
-        
-        Args:
-            messages: List of message objects with role and content
-            system: Optional system prompt to control model behavior
-            max_tokens: Maximum number of tokens to generate
-            temperature: Controls randomness (0-1)
-            
-        Returns:
-            The generated text response
-        """
-        message_params = {
-            "model": self.model,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "messages": messages
-        }
-        
-        if system:
-            message_params["system"] = system
-            
-        response = self.client.messages.create(**message_params)
-        
-        # Extract the text content from the response
-        if response.content:
-            return response.content[0].text
-        return ""
-    
     def generate_with_tools(self,
                            prompt: str,
                            system: Optional[str] = None,
@@ -217,6 +183,7 @@ class LLM:
         
         tool_usage = []
         iterations = 0
+        history = []
         
         while iterations < max_iterations:
             iterations += 1
@@ -255,7 +222,7 @@ class LLM:
                 
                 return {
                     "response": final_response,
-                    "tool_usage": tool_usage
+                    "tool_usage": tool_usage,
                 }
             
             # Process tool calls
