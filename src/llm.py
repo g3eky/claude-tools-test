@@ -98,7 +98,8 @@ class LLM:
                 prompt: str, 
                 system: Optional[str] = None,
                 max_tokens: int = 1000,
-                temperature: float = 1.0) -> str:
+                temperature: float = 1.0,
+                history: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
         Generate a response from the language model.
         
@@ -107,25 +108,38 @@ class LLM:
             system: Optional system prompt to control model behavior
             max_tokens: Maximum number of tokens to generate
             temperature: Controls randomness (0-1)
+            history: Optional conversation history from previous calls
             
         Returns:
-            The generated text response
+            Dictionary containing the response and updated conversation history
         """
+        # Initialize history if not provided
+        if history is None:
+            history = []
+            
+        # Create user message
+        user_message = {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ]
+        }
+        
+        # Add to history if it's a new conversation
+        if not history:
+            messages = [user_message]
+        else:
+            # Use existing history and add new user message
+            messages = history + [user_message]
+        
         message_params = {
             "model": self.model,
             "max_tokens": max_tokens,
             "temperature": temperature,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": prompt
-                        }
-                    ]
-                }
-            ]
+            "messages": messages
         }
         
         if system:
@@ -134,9 +148,28 @@ class LLM:
         response = self.client.messages.create(**message_params)
         
         # Extract the text content from the response
+        response_text = ""
         if response.content:
-            return response.content[0].text
-        return ""
+            response_text = response.content[0].text
+            
+        # Create assistant message to add to history
+        assistant_message = {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "text",
+                    "text": response_text
+                }
+            ]
+        }
+        
+        # Update history with new messages
+        updated_history = messages + [assistant_message]
+        
+        return {
+            "response": response_text,
+            "history": updated_history
+        }
     
     def generate_with_tools(self,
                            prompt: str,
