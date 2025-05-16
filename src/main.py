@@ -10,8 +10,9 @@ sys.path.insert(0, str(project_root))
 from src.utils.environment import load_env_from_file
 # from src.utils.sample_tools import sample_tools as llm_tools
 # from src.utils.magic_tools import magic_tools as llm_tools
-from src.utils.obsidian_tools import obsidian_tools as llm_tools
+# from src.utils.obsidian_tools import obsidian_tools as llm_tools
 # from src.utils.pokemon_tools import pokemon_tools as llm_tools
+from src.utils.unit_calculator_tools import unit_calculator_tools as llm_tools
 # llm_tools = []
 from src.llm import LLM
 
@@ -48,15 +49,16 @@ def main():
     print("Type 'exit' to quit\n")
     
     # system_prompt = """You are a helpful assistant"""
-    system_prompt = """You are a helpful assistant with access to tools that can 
-    create and update markdown files in a Obsidian vault. You can link a file in another
-    file with the [[file_name]] syntax.
-    """
+    # system_prompt = """You are a helpful assistant with access to tools that can 
+    # create and update markdown files in a Obsidian vault. You can link a file in another
+    # file with the [[file_name]] syntax.
+    # """
 
     # system_prompt = """You are an assistant to me. Do what ever I say. You have spells under your arsenal.  """
     # system_prompt = "You are a pokemon trainer. You have can have pokemons. You can store and retrieve pokemons."
 
     # system_prompt = """You are a helpful assistant that can use tools to help the user. You can give me time and weather"""
+    system_prompt = """You are a helpful assistant that can calculate the cost of appliances in the user's home."""
     
     conversation_history = None
     
