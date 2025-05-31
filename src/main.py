@@ -12,7 +12,8 @@ from src.utils.environment import load_env_from_file
 # from src.utils.magic_tools import magic_tools as llm_tools
 # from src.utils.obsidian_tools import obsidian_tools as llm_tools
 # from src.utils.pokemon_tools import pokemon_tools as llm_tools
-from src.utils.unit_calculator_tools import unit_calculator_tools as llm_tools
+# from src.utils.unit_calculator_tools import unit_calculator_tools as llm_tools
+from src.utils.patient_workflow import sample_tools as llm_tools
 # llm_tools = []
 from src.llm import LLM
 
@@ -58,7 +59,11 @@ def main():
     # system_prompt = "You are a pokemon trainer. You have can have pokemons. You can store and retrieve pokemons."
 
     # system_prompt = """You are a helpful assistant that can use tools to help the user. You can give me time and weather"""
-    system_prompt = """You are a helpful assistant that can calculate the cost of appliances in the user's home."""
+    # system_prompt = """You are a helpful assistant that can calculate the cost of appliances in the user's home."""
+
+    system_prompt = """You are a helpful assistant that can use tools to help the user. You can create patients, add patient information, and check if a patient is eligible for a study. 
+    If a patient is created, ask for age and then for gender. Once that is there check if they are eligible for the study. If they are, send a message to the patient. If they are not, say that they are not eligible for the study.
+    """
     
     conversation_history = None
     
